@@ -7,6 +7,8 @@ from autogen_agentchat.teams import MagenticOneGroupChat
 # from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
 # from autogen_agentchat.agents import CodeExecutorAgent
 # from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
+from autogen_agentchat.conditions import ExternalTermination
+
 import httpx
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 from dotenv import load_dotenv
@@ -308,7 +310,7 @@ class GitManager:
         else:
             return f"Failed to fetch issue: {response.status_code} - {response.text}"
 
-    def issue_post_comment(self, repo_full_name: str, issue_number: int, comment: str):
+    def issue_post_comment(self, repo_full_name: str, issue_number: int, comment: str) -> str:
         """
         Post a comment on an issue or PR using GitHub API
         Args:
@@ -414,46 +416,21 @@ class GitMagenticAgent:
                             model_client=model_client,
                             tools=self.tools,  # Register the tool.
                             system_message="You are a helpful AI assistant agent, capable of completing specified git related operations with provided tools.",
-                        )
+        
+                       )
+        # self.termination = ExternalTermination()
+        # self.team = MagenticOneGroupChat([self.git_assistant], model_client=model_client, max_stalls=2, description="Only do the asked task.",termination_condition=self.termination)
         self.team = MagenticOneGroupChat([self.git_assistant], model_client=model_client, max_stalls=2, description="Only do the asked task.")
 
 
 
 class GitMagenticAgentExecutor(AgentExecutor):
-    """Test AgentProxy Implementation."""
+    """GitAgent implementation."""
 
     def __init__(self):
         self.agent = GitMagenticAgent()
         
 
-    # --8<-- [end:HelloWorldAgentExecutor_init]
-    # --8<-- [start:HelloWorldAgentExecutor_execute]
-    # async def execute(
-    #     self,
-    #     context: RequestContext,
-    #     event_queue: EventQueue,
-    # ) -> None:
-    #     result = await self.agent.run_git_agent()
-    #     await event_queue.enqueue_event(new_agent_text_message(result))
-
-    # async def execute(
-    #     self,
-    #     context: RequestContext,
-    #     event_queue: EventQueue,
-    # ) -> None:
-    #     # Extract the user message from context
-    #     user_message = None
-    #     if hasattr(context, "message") and context.message:
-    #         # For ADK/A2A, message is usually in context.message.parts[0].text
-    #         try:
-    #             user_message = context.message.parts[0].text
-    #         except Exception:
-    #             user_message = str(context.message)
-    #     else:
-    #         user_message = "No message provided"
-
-    #     result = await self.agent.run_git_agent(task=user_message)
-    #     await event_queue.enqueue_event(new_agent_text_message(result))
 
     async def execute(
         self,
@@ -462,29 +439,34 @@ class GitMagenticAgentExecutor(AgentExecutor):
     ) -> None:
         query = context.get_user_input()
         task = context.current_task
-
+        print("*********************************************",task)
         # This agent always produces Task objects. If this request does
         # not have current task, create a new one and use it.
         if not task:
             task = new_task(context.message)
+            print("############### NEW TASK", task)
             await event_queue.enqueue_event(task)
         updater = TaskUpdater(event_queue, task.id, task.context_id)
         # invoke the underlying agent, using streaming results. The streams
         # now are update events.
+        print("********************************************* AGENT QUERY", query)
         async for message in self.agent.team.run_stream(task=query, output_task_messages=True):  # type: ignore
             if isinstance(message, TaskResult):
-                # result += (("Stop Reason:", message.stop_reason))
+                # print(("Stop Reason:", message.stop_reason))
                 await updater.update_status(
                         TaskState.completed,
                         new_agent_text_message(message.stop_reason, task.context_id, task.id),
                     )
             else:
-                # result += f"{message.source} - {message.content}"
+                # print(f"{message.source} - {message.content}")
                 await updater.add_artifact(
-                    [Part(root=TextPart(text=message.content))],
+                    [Part(root=TextPart(text=str(message.content)))],
                     name='response',
                 )
-        await updater.complete()
+            await updater.complete()
+            break
+
+        # self.agent.termination.set()
         self.agent.team.reset()
 
     # --8<-- [end:HelloWorldAgentExecutor_execute]
@@ -496,75 +478,3 @@ class GitMagenticAgentExecutor(AgentExecutor):
         raise Exception('cancel not supported')
 
     # --8<-- [end:HelloWorldAgentExecutor_cancel]
-
-
-
-
-
-
-
-
-
-
-
-
-
-# # async def main(repo_url : str, cloned_repo_path: str = f"./Cloned_Repos") -> None:
-# async def main(repo_url_list : list) -> None:
-
-#     git_manager = GitManager()
-#     tools = [git_manager.clone_repo, git_manager.issue_post_comment, git_manager.create_branch,git_manager.list_branches, git_manager.commit_changes, git_manager.push_changes, git_manager.switch_branch, git_manager.pull_changes, git_manager.create_pull_request, git_manager.get_status, git_manager.get_issue, git_manager.get_merge_conflicts, git_manager.merge_branch]
-
-#     git_assistant = AssistantAgent(
-#     "GitAssistant",
-#     model_client=model_client,
-#     tools=tools,  # Register the tool.
-#     system_message="You are a helpful AI assistant agent, capable of completing specified git related operations with provided tools.",
-# )
-
-#     team = MagenticOneGroupChat([git_assistant], model_client=model_client, max_stalls=2, description="Only do the asked task.")
-
-#     # task = f"""
-#     # clone this GitHub repository:
-#     #   repo url: '{repo_url}'
-#     #   cloned repo path: '{cloned_repo_path}'
-#     # """
-
-
-#     # task = f"""
-#     # Clone the GitHub Repository and Post this GitHub comment for given Issue Number:
-#     #   repo url: '{repo_url}'
-#     #   cloned repo path: '{cloned_repo_path}'
-#     #   issue number: 1
-#     #   comment:comment for issue 1 from git assistant magentic v2
-#     # """
-
-#     # task = f"""
-#     #   Post this GitHub comment for given Issue Number:
-#     #   Repo URLs: '{repo_url_list}'
-#     #   issue number: 1
-#     #   comment: test comment from utkarsh branch of Git_Magentic_Test_Repo
-#     # """
-
-#     # task = f"""
-#     #   1. merge test-dev-3 to main branch.
-#     #   2. If no conflicts are found, push the changes.
-
-#     #   Repo URLs: {repo_url_list}
-#     # """
-
-#     task = f"""
-#         1. Create a pull request for merging test-dev-3 into main.
-#         2. give title: 'Please Merge test-dev-3 into main'
-#                 description: 'Added line 13 in hello_world.py to check the pr generation from another branch'
-#         Repo URLs: {repo_url_list}
-#             """
-#     async for message in team.run_stream(task=task, output_task_messages=True):  # type: ignore
-#         if isinstance(message, TaskResult):
-#             print("Stop Reason:", message.stop_reason)
-#         else:
-#             print(f"{message.source} - {message.content}")
-#     # team.reset()
-
-# repo_1 = "https://github.com/utkarsh-alpuria/Git_Magentic_Test_Repo.git"
-# asyncio.run(main([repo_1]))
