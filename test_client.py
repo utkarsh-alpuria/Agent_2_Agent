@@ -14,7 +14,6 @@ from a2a.types import (
 )
 from a2a.utils.constants import (
     AGENT_CARD_WELL_KNOWN_PATH,
-    EXTENDED_AGENT_CARD_PATH,
 )
 
 
@@ -55,44 +54,6 @@ async def main() -> None:
                 '\nUsing PUBLIC agent card for client initialization (default).'
             )
 
-            # if _public_card.supports_authenticated_extended_card:
-            #     try:
-            #         logger.info(
-            #             f'\nPublic card supports authenticated extended card. Attempting to fetch from: {base_url}{EXTENDED_AGENT_CARD_PATH}'
-            #         )
-            #         auth_headers_dict = {
-            #             'Authorization': 'Bearer dummy-token-for-extended-card'
-            #         }
-            #         _extended_card = await resolver.get_agent_card(
-            #             relative_card_path=EXTENDED_AGENT_CARD_PATH,
-            #             http_kwargs={'headers': auth_headers_dict},
-            #         )
-            #         logger.info(
-            #             'Successfully fetched authenticated extended agent card:'
-            #         )
-            #         logger.info(
-            #             _extended_card.model_dump_json(
-            #                 indent=2, exclude_none=True
-            #             )
-            #         )
-            #         final_agent_card_to_use = (
-            #             _extended_card  # Update to use the extended card
-            #         )
-            #         logger.info(
-            #             '\nUsing AUTHENTICATED EXTENDED agent card for client initialization.'
-            #         )
-            #     except Exception as e_extended:
-            #         logger.warning(
-            #             f'Failed to fetch extended agent card: {e_extended}. Will proceed with public card.',
-            #             exc_info=True,
-            #         )
-            # elif (
-            #     _public_card
-            # ):  # supports_authenticated_extended_card is False or None
-            #     logger.info(
-            #         '\nPublic card does not indicate support for an extended card. Using public card.'
-            #     )
-
         except Exception as e:
             logger.error(
                 f'Critical error fetching public agent card: {e}', exc_info=True
@@ -112,18 +73,22 @@ async def main() -> None:
                 'role': 'user',
                 'parts': [
                     {'kind': 'text', 
-                     'text': 'Post this GitHub comment for given Issue Number: Repo URLs: "https://github.com/utkarsh-alpuria/Git_Magentic_Test_Repo.git" issue number: 1 comment: This is the 1st comment from A2A hosted agent'}
+                     'text': '''
+                                1. Switch to test-dev-3 branch
+                                Repo URLs: "https://github.com/utkarsh-alpuria/Git_Magentic_Test_Repo.git" 
+                                
+                            '''}
                     #  'text':  'Hi Git'}
                 ],
                 'messageId': uuid4().hex,
             },
         }
-        request = SendMessageRequest(
-            id=str(uuid4()), params=MessageSendParams(**send_message_payload)
-        )
+        # request = SendMessageRequest(
+        #     id=str(uuid4()), params=MessageSendParams(**send_message_payload)
+        # )
 
-        response = await client.send_message(request)
-        print(response.model_dump(mode='json', exclude_none=True))
+        # response = await client.send_message(request)
+        # print(response.model_dump(mode='json', exclude_none=True))
         # --8<-- [end:send_message]
 
         # --8<-- [start:send_message_streaming]
