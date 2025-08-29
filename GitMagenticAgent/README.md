@@ -80,9 +80,9 @@ GitMagenticAgent/
    ```
 
 ## 💡 How to Use
-- **Agent Execution:** Use `agent_executer.py` to execute Git-related tasks.
+- **Agent Execution:** Use `main.py` to start server and execute Git-related tasks.
 - **Client Interaction:** Use `client.py` to interact with the agent and send queries.
-- **Test Repository:** The `utkarsh-alpuria/Git_Magentic_Test_Repo` folder contains a sample repository for testing.
+
 
 ## 🌐 What This Project Does
 GitMagenticAgent simplifies Git operations by automating repetitive tasks and providing an AI-powered interface for interacting with repositories. It is designed to:
