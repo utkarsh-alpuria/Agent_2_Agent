@@ -1,41 +1,12 @@
-import asyncio
-from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.teams import MagenticOneGroupChat
-# from autogen_agentchat.ui import Console
-# from autogen_ext.agents.web_surfer import MultimodalWebSurfer
-# from autogen_ext.agents.file_surfer import FileSurfer
-# from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
-# from autogen_agentchat.agents import CodeExecutorAgent
-# from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
-from autogen_agentchat.conditions import ExternalTermination
-
+# from autogen_agentchat.conditions import ExternalTermination
 import httpx
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
+from autogen_agentchat.agents import AssistantAgent
 from dotenv import load_dotenv
 import os
-from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.base import TaskResult
 from git import Repo, GitCommandError
 import requests
-
-from a2a.server.agent_execution import AgentExecutor, RequestContext
-from a2a.server.events import EventQueue
-from a2a.utils import new_agent_text_message
-
-# from a2a.server.agent_execution import AgentExecutor, RequestContext
-# from a2a.server.events import EventQueue
-from a2a.server.tasks import TaskUpdater
-from a2a.types import (
-    Part,
-    # Task,
-    TaskState,
-    TextPart,
-    # UnsupportedOperationError,
-)
-from a2a.utils import (
-    new_agent_text_message,
-    new_task,
-)
 
 load_dotenv()
 
@@ -421,60 +392,3 @@ class GitMagenticAgent:
         # self.termination = ExternalTermination()
         # self.team = MagenticOneGroupChat([self.git_assistant], model_client=model_client, max_stalls=2, description="Only do the asked task.",termination_condition=self.termination)
         self.team = MagenticOneGroupChat([self.git_assistant], model_client=model_client, max_stalls=2, description="Only do the asked task.")
-
-
-
-class GitMagenticAgentExecutor(AgentExecutor):
-    """GitAgent implementation."""
-
-    def __init__(self):
-        self.agent = GitMagenticAgent()
-        
-
-
-    async def execute(
-        self,
-        context: RequestContext,
-        event_queue: EventQueue,
-    ) -> None:
-        query = context.get_user_input()
-        task = context.current_task
-        print("*********************************************",task)
-        # This agent always produces Task objects. If this request does
-        # not have current task, create a new one and use it.
-        if not task:
-            task = new_task(context.message)
-            print("############### NEW TASK", task)
-            await event_queue.enqueue_event(task)
-        updater = TaskUpdater(event_queue, task.id, task.context_id)
-        # invoke the underlying agent, using streaming results. The streams
-        # now are update events.
-        print("********************************************* AGENT QUERY", query)
-        async for message in self.agent.team.run_stream(task=query, output_task_messages=True):  # type: ignore
-            if isinstance(message, TaskResult):
-                # print(("Stop Reason:", message.stop_reason))
-                await updater.update_status(
-                        TaskState.completed,
-                        new_agent_text_message(message.stop_reason, task.context_id, task.id),
-                    )
-            else:
-                # print(f"{message.source} - {message.content}")
-                await updater.add_artifact(
-                    [Part(root=TextPart(text=str(message.content)))],
-                    name='response',
-                )
-            await updater.complete()
-            break
-
-        # self.agent.termination.set()
-        self.agent.team.reset()
-
-    # --8<-- [end:HelloWorldAgentExecutor_execute]
-
-    # --8<-- [start:HelloWorldAgentExecutor_cancel]
-    async def cancel(
-        self, context: RequestContext, event_queue: EventQueue
-    ) -> None:
-        raise Exception('cancel not supported')
-
-    # --8<-- [end:HelloWorldAgentExecutor_cancel]

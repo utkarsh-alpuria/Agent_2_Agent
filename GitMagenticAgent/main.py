@@ -8,7 +8,7 @@ from a2a.types import (
     AgentCard,
     AgentSkill,
 )
-from git_magentic_agent_executer import (
+from agent_executer import (
     GitMagenticAgentExecutor,  # type: ignore[import-untyped]
 )
 

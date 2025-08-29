@@ -1,15 +1,13 @@
 import logging
-
+import asyncio
 from typing import Any
 from uuid import uuid4
-
 import httpx
-
 from a2a.client import A2ACardResolver, A2AClient
 from a2a.types import (
     AgentCard,
     MessageSendParams,
-    SendMessageRequest,
+    # SendMessageRequest,
     SendStreamingMessageRequest,
 )
 from a2a.utils.constants import (
@@ -22,8 +20,6 @@ async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)  # Get a logger instance
 
-    # --8<-- [start:A2ACardResolver]
-
     base_url = 'http://localhost:9999'
 
     async with httpx.AsyncClient(timeout=httpx.Timeout(120)) as httpx_client:
@@ -31,9 +27,7 @@ async def main() -> None:
         resolver = A2ACardResolver(
             httpx_client=httpx_client,
             base_url=base_url,
-            # agent_card_path uses default, extended_agent_card_path also uses default
         )
-        # --8<-- [end:A2ACardResolver]
 
         # Fetch Public Agent Card and Initialize Client
         final_agent_card_to_use: AgentCard | None = None
@@ -74,24 +68,15 @@ async def main() -> None:
                 'parts': [
                     {'kind': 'text', 
                      'text': '''
-                                1. Switch to test-dev-3 branch
-                                Repo URLs: "https://github.com/utkarsh-alpuria/Git_Magentic_Test_Repo.git" 
-                                
+                                1. Switch to main branch.
+
+                                Repo URLs: "https://github.com/utkarsh-alpuria/Git_Magentic_Test_Repo.git"
+
                             '''}
-                    #  'text':  'Hi Git'}
                 ],
                 'messageId': uuid4().hex,
             },
         }
-        # request = SendMessageRequest(
-        #     id=str(uuid4()), params=MessageSendParams(**send_message_payload)
-        # )
-
-        # response = await client.send_message(request)
-        # print(response.model_dump(mode='json', exclude_none=True))
-        # --8<-- [end:send_message]
-
-        # --8<-- [start:send_message_streaming]
 
         streaming_request = SendStreamingMessageRequest(
             id=str(uuid4()), params=MessageSendParams(**send_message_payload)
@@ -100,11 +85,9 @@ async def main() -> None:
         stream_response = client.send_message_streaming(streaming_request)
 
         async for chunk in stream_response:
-            print(chunk.model_dump(mode='json', exclude_none=True))
-        # --8<-- [end:send_message_streaming]
+            print('STREAM RESPONSE: ',chunk.model_dump(mode='json', exclude_none=True))
+
 
 
 if __name__ == '__main__':
-    import asyncio
-
     asyncio.run(main())
